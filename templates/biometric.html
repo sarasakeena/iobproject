@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Biometric Authentication</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Biometric Authentication</h2>
+        <div class="verification-container">
+            <video id="videoElement" width="640" height="480" autoplay></video>
+            <button id="verifyBtn" class="btn">Verify Identity</button>
+            <p id="status"></p>
+            <p id="attemptsInfo" style="color: orange;"></p>
+        </div>
+
+        <!-- Register Button -->
+        <form action="{{ url_for('register_page') }}" method="get" style="margin-top: 20px;">
+            <button type="submit" class="btn btn-success">Register New User</button>
+        </form>
+    </div>
+
+    <!-- Modal for popup messages -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="modalTitle"></h3>
+            <p id="modalMessage"></p>
+            <button id="modalButton" class="btn">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let attempts = 0;
+        let blockedUntil = 0;
+        const MAX_ATTEMPTS = 3;
+        const COOLDOWN_TIME = 120000; // 2 minutes in ms
+        const BLOCK_TIME = 600000; // 10 minutes in ms
+
+        // Modal elements
+        const modal = document.getElementById('messageModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalButton = document.getElementById('modalButton');
+        const closeBtn = document.getElementsByClassName('close')[0];
+
+        // Initialize camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                document.getElementById('videoElement').srcObject = stream;
+            })
+            .catch(error => {
+                showModal('Error', 'Camera access error: ' + error.message);
+            });
+
+        // Verification handler
+        document.getElementById('verifyBtn').addEventListener('click', async () => {
+            const now = Date.now();
+            
+            // Check if blocked
+            if (blockedUntil > now) {
+                const remaining = Math.ceil((blockedUntil - now) / 60000);
+                showModal('Blocked', `Too many failed attempts. Please try again after ${remaining} minutes.`);
+                return;
+            }
+
+            const video = document.getElementById('videoElement');
+            const canvas = document.createElement('canvas');
+            const verifyBtn = document.getElementById('verifyBtn');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            verifyBtn.disabled = true;
+            verifyBtn.classList.add('btn-disabled');
+
+            try {
+                const imageData = canvas.toDataURL('image/jpeg');
+                const response = await fetch('/verify_biometric', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imageData })
+                });
+
+                const result = await response.json();
+                const statusElement = document.getElementById('status');
+                const attemptsInfo = document.getElementById('attemptsInfo');
+
+                if (result.error) {
+                    statusElement.textContent = `Error: ${result.error}`;
+                    statusElement.style.color = 'red';
+                    showModal('Error', result.error);
+                } else {
+                    if (result.verified) {
+                        // Successful verification
+                        statusElement.textContent = `Verification Successful!`;
+                        statusElement.style.color = 'green';
+                        showModal('Success', 'Verification successful! Redirecting to transaction page...');
+                        
+                        // Redirect after 2 seconds
+                        setTimeout(() => {
+                            window.location.href = '/proceed';
+                        }, 2000);
+                    } else {
+                        // Failed verification
+                        attempts++;
+                        statusElement.textContent = `Verification Failed! `;
+                        statusElement.style.color = 'red';
+                        
+                        if (attempts >= MAX_ATTEMPTS) {
+                            // Block after max attempts
+                            blockedUntil = now + BLOCK_TIME;
+                            attemptsInfo.textContent = `Account temporarily blocked. Try again in 10 minutes.`;
+                            showModal('Blocked', 'Too many failed attempts. Your account has been temporarily blocked for security reasons. Please try again after 10 minutes.');
+                            
+                            // Send alert to admin (simulated here with console.log)
+                            console.log('ALERT: Suspicious activity detected. Blocking user.');
+                        } else {
+                            // Show hints for improvement
+                            const hints = [
+                                "Ensure proper lighting on your face.",
+                                "Remove sunglasses or hats if wearing any.",
+                                "Position your face clearly in the frame.",
+                                "Try again in better lighting conditions."
+                            ];
+                            attemptsInfo.textContent = `Attempts remaining: ${MAX_ATTEMPTS - attempts}`;
+                            showModal('Failed', `Verification failed. ${hints.join(' ')}`);
+                            
+                            // Enable button after cooldown
+                            setTimeout(() => {
+                                verifyBtn.disabled = false;
+                                verifyBtn.classList.remove('btn-disabled');
+                            }, COOLDOWN_TIME);
+                        }
+                    }
+                }
+            } catch (error) {
+                showModal('Error', 'Verification failed: ' + error.message);
+                document.getElementById('status').textContent = 'Verification failed: ' + error.message;
+                document.getElementById('status').style.color = 'red';
+            } finally {
+                if (attempts < MAX_ATTEMPTS && !blockedUntil) {
+                    verifyBtn.disabled = false;
+                    verifyBtn.classList.remove('btn-disabled');
+                }
+            }
+        });
+
+        // Modal functions
+        function showModal(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Event listeners for modal
+        modalButton.onclick = closeModal;
+        closeBtn.onclick = closeModal;
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

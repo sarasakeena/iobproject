@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIN Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-new {
+            background-color: #2196F3;
+        }
+        .pin-input {
+            font-size: 24px;
+            padding: 10px;
+            width: 150px;
+            text-align: center;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-container {
+            margin: 30px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .success {
+            color: green;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .user-options {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome</h1>
+    <p>Are you a new or existing user?</p>
+
+    <!-- Success message will appear here -->
+    <div id="message" class="hidden"></div>
+
+    <div class="user-options">
+        <button class="btn btn-new" onclick="showForm('new')">New User</button>
+        <button class="btn" onclick="showForm('existing')">Existing User</button>
+    </div>
+
+    <div class="form-container">
+        <!-- New User PIN Registration Form -->
+        <form id="new-user-form" class="hidden" onsubmit="registerPin(event)">
+            <h2>Set Your New PIN</h2>
+            <input class="pin-input" type="password" name="new-pin" 
+                   pattern="\d{4,6}" title="PIN must be 4-6 digits" required>
+            <div>
+                <button class="btn" type="submit">Register PIN</button>
+            </div>
+        </form>
+
+        <!-- PIN Verification Form -->
+        <form id="verify-pin-form" class="hidden" onsubmit="verifyPin(event)">
+            <h2>Verify Your PIN</h2>
+            <input class="pin-input" type="password" name="pin" required>
+            <div>
+                <button class="btn" type="submit">Verify PIN</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Show the appropriate form based on user type
+        function showForm(userType) {
+            document.getElementById('new-user-form').classList.add('hidden');
+            document.getElementById('verify-pin-form').classList.add('hidden');
+            
+            if (userType === 'new') {
+                document.getElementById('new-user-form').classList.remove('hidden');
+                document.querySelector('#new-user-form input').focus();
+            } else {
+                document.getElementById('verify-pin-form').classList.remove('hidden');
+                document.querySelector('#verify-pin-form input').focus();
+            }
+        }
+
+        // Handle PIN registration
+        function registerPin(event) {
+            event.preventDefault();
+            const pin = event.target['new-pin'].value;
+            
+            // Validate PIN
+            if (pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin)) {
+                showMessage('PIN must be 4-6 digits', 'error');
+                return;
+            }
+            
+            // Store PIN (in a real app, send to server)
+            localStorage.setItem('user_pin', pin);
+            showMessage('PIN registered successfully!', 'success');
+            
+            // Show verification form
+            document.getElementById('new-user-form').classList.add('hidden');
+            document.getElementById('verify-pin-form').classList.remove('hidden');
+            document.querySelector('#verify-pin-form input').focus();
+        }
+
+        // Handle PIN verification
+        function verifyPin(event) {
+            event.preventDefault();
+            const enteredPin = event.target.pin.value;
+            const storedPin = localStorage.getItem('user_pin');
+            
+            if (enteredPin === storedPin) {
+                showMessage('PIN verification successful!', 'success');
+                // Redirect to your app's main page
+                window.location.href = '/biometric';
+            } else {
+                showMessage('Invalid PIN. Please try again.', 'error');
+            }
+        }
+
+        // Show messages to user
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = type;
+            messageDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

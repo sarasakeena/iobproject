@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Page</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <!-- Logo Section -->
+      <img src="{{ url_for('static', filename='iob.png') }}" alt="Logo" class="logo">
+
+      <!-- Welcome Message -->
+      <h1>Welcome to <span class="bank-name">IOB Bank</span></h1>
+      <p>Secure your banking with advanced authentication.</p>
+
+      <!-- Login Button -->
+      <button class="login-btn" id="verifyBtn">Proceed to Verification</button>
+      <script>
+        document.getElementById('verifyBtn').addEventListener('click', function() {
+          window.location.href = '{{ url_for("pin") }}';
+        });
+      </script>
+    </div>
+  </div>
+</body>
+</html>

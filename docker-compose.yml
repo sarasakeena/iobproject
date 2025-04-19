@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  db:
+    image: ankane/pgvector
+    container_name: face_auth_db
+    environment:
+      POSTGRES_DB: face_auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: sakeena123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

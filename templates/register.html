@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Registration</title>
+    <style>
+        .alert { padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .success { background: #dff0d8; color: #3c763d; }
+        .error { background: #f2dede; color: #a94442; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Face Registration</h1>
+        
+        {% if message %}
+        <div class="alert {% if success %}success{% else %}error{% endif %}">
+            {{ message }}
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            <input type="text" name="name" placeholder="Name" required>
+            <input type="password" name="password" placeholder="Enter your pin" required>
+            <button type="submit">Register</button>
+        </form>
+        <p>Camera will open in a few sec after registration
+            Press 'c' to capture your face
+        </p>
+        
+    </div>
+</body>
+</html>
