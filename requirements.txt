@@ -55,15 +55,15 @@ fqdn==1.5.1
 fsspec==2024.6.1
 gast==0.6.0
 gdown==5.2.0
-google-api-core==2.19.2
+google-api-core>=2.19.2
 google-auth==2.34.0
-google-cloud-dialogflow==2.31.0
+google-cloud-dialogflow>=2.31.0
 google-pasta==0.2.0
-googleapis-common-protos==1.65.0
+googleapis-common-protos>=1.65.0
 graphviz==0.20.3
 greenlet==3.1.1
-grpcio==1.66.1
-grpcio-status==1.66.1
+grpcio>=1.66.1
+grpcio-status>=1.66.1
 gunicorn==23.0.0
 h11==0.14.0
 h5py==3.11.0
@@ -152,7 +152,10 @@ prompt_toolkit==3.0.47
 proto-plus==1.24.0
 #protobuf==3.20.3  # Version locked
 #protobuf>=4.25.1,<5.0.0
-protobuf>=3.20.2,<6.0.0
+#protobuf>=3.20.2,<6.0.0
+#protobuf==3.20.3  # A widely compatible version
+
+protobuf>=4.21.6,<6.0.0
 
 psutil==6.0.0
 psycopg2==2.9.10
