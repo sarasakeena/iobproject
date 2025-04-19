@@ -184,6 +184,6 @@ pytz==2024.1
 PyWavelets==1.8.0
 #pywin32==306
 pywin32==306; python_version < "3.11" 
-pywinpty==2.0.13
+#pywinpty==2.0.13
 PyYAML==6.0.2
 pyzmq
