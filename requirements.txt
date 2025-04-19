@@ -107,7 +107,7 @@ retina-face==0.0.17
 rich==13.9.4
 rsa==4.9
 safetensors==0.5.3
-scikit-image==0.25.2
+scikit-image
 scikit-learn==1.6.1
 scipy==1.11.4
 seaborn==0.13.2
