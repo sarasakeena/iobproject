@@ -129,7 +129,8 @@ nest-asyncio==1.6.0
 networkx==3.3
 notebook==7.2.2
 notebook_shim==0.2.4
-numpy==1.26.4
+numpy>=1.24
+
 openai==1.43.0
 opencv-contrib-python==4.10.0.84
 opencv-python==4.11.0.86
@@ -177,7 +178,7 @@ python-slugify==8.0.4
 pytweening==1.2.0
 pytz==2024.1
 PyWavelets==1.8.0
-pywin32==306
+#pywin32==306
 pywinpty==2.0.13
 PyYAML==6.0.2
 pyzmq==26.2.0
