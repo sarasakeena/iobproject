@@ -148,7 +148,9 @@ platformdirs==4.2.2
 prometheus_client==0.20.0
 prompt_toolkit==3.0.47
 proto-plus==1.24.0
-protobuf==3.20.3  # Version locked
+#protobuf==3.20.3  # Version locked
+protobuf>=4.25.1,<5.0.0
+
 psutil==6.0.0
 psycopg2==2.9.10
 psycopg2-binary==2.9.10
