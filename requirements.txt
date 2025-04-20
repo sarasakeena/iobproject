@@ -19,7 +19,7 @@ cvzone==1.6.1
 cycler==0.12.1
 deepface==0.0.79
 Deprecated==1.2.18
-dlib==19.24.6
+dlib==19.24.2 --find-links https://pypi.anaconda.org/intel/simple
 dlib-bin==19.24.6
 face-recognition==1.3.0
 face-recognition-models==0.3.0
