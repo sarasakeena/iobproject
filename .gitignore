@@ -1,1 +1,20 @@
-"venv/" 
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.dll
+*.so
+*.dylib
+*.pkl
+*.pt
+*.h5
+*.dat
+*.nv
+.env
+.DS_Store
+/External Libraries/
+/Scratches and Consoles/
