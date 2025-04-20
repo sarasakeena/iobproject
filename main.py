@@ -1,5 +1,7 @@
 import dlib
+import bcrypt
 import os
+import re
 import cv2
 import numpy as np
 import base64
@@ -341,6 +343,7 @@ def select_user_type():
         session.pop('pin_registered', None)  # Clear previous registration if any
     return redirect(url_for('pin'))
 
+
 @app.route('/register_pin', methods=['POST'])
 def register_pin():
     if session.get('user_type') != 'new':
@@ -354,29 +357,56 @@ def register_pin():
         flash('PIN must be 4-6 digits', 'error')
         return redirect(url_for('pin'))
     
-    # Store the PIN (in a real app, store hashed version in database)
-    session['temp_pin'] = pin
+    # Hash the PIN using bcrypt
+    hashed_pin = bcrypt.hashpw(pin.encode('utf-8'), bcrypt.gensalt())
+    
+    # Store the hashed PIN (in a real app, store this in a database, not in the session)
+    session['hashed_pin'] = hashed_pin  # Store the hashed PIN
+    
+    # Remove plain-text PIN from the session (it's now unnecessary and should not be stored)
+    session.pop('temp_pin', None)
+    
+    # Indicate that PIN is registered
     session['pin_registered'] = True
     flash('PIN registered successfully! Please verify your PIN', 'success')
+    
     return redirect(url_for('pin'))
+
+
+@app.route('/check_pin', methods=['GET'])
+def check_pin():
+    # Check if the hashed PIN is stored in the session
+    if 'hashed_pin' in session:
+        hashed_pin = session['hashed_pin']
+        
+        # Check if the stored hashed PIN matches the bcrypt format (60 characters long)
+        if re.match(r'^\$2[ab]\$\d{2}\$[A-Za-z0-9./]{53}$', hashed_pin):
+            flash('PIN is stored in a valid hashed form.', 'success')
+        else:
+            flash('Stored value is not a valid hash.', 'error')
+    else:
+        flash('No hashed PIN found in session.', 'error')
+    
+    return redirect(url_for('pin'))
+
 
 @app.route('/verify_pin', methods=['POST'])
 def verify_pin():
-    print("Received request for PIN verification")  # Debugging output
-    if 'temp_pin' not in session:
+    if 'hashed_pin' not in session:
         flash('No PIN registered for verification', 'error')
         return redirect(url_for('pin'))
     
     entered_pin = request.form.get('pin')
     
-    if session['temp_pin'] == entered_pin:
+    # Check if the entered PIN matches the stored hashed PIN
+    if bcrypt.checkpw(entered_pin.encode('utf-8'), session['hashed_pin']):
         flash('PIN verification successful!', 'success')
-        session.pop('temp_pin', None)
-        session.pop('pin_registered', None)
+        session.pop('hashed_pin', None)  # Remove the hashed PIN after verification
+        session.pop('pin_registered', None)  # Clear the PIN registration status
         return redirect(url_for('biometric'))
     else:
-        flash('Invalid PIN. Please try again.', 'error')
-        return redirect(url_for('pin'))
+        flash('Invalid PIN, please try again', 'error')
+        return redirect(url_for('pin'))@app.route('/verify_pin', methods=['POST'])
 
 @app.route('/pin')
 def pin():
@@ -441,5 +471,5 @@ def detect_faces_mtcnn():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
-    #main()
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    port = int(os.environ.get("PORT", 5000))  # fallback to 5000 for local dev
+    app.run(host='0.0.0.0', port=port)
