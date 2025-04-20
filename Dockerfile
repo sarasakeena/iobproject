@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev \
     liblapack-dev \
     libx11-dev \
+    python3-dev \
+    pkg-config \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory inside the container
@@ -25,8 +28,9 @@ WORKDIR /app
 # Copy requirements.txt first to leverage Docker layer caching
 COPY requirements.txt .
 
-RUN pip install --upgrade pip setuptools wheel --timeout=100 \
-    && pip install --no-cache-dir -r requirements.txt --timeout=100
+# Install Python dependencies
+RUN pip install --upgrade pip setuptools wheel --timeout=100
+RUN pip install --no-cache-dir -r requirements.txt --timeout=100
 
 # Copy the rest of the application
 COPY . .
