@@ -1,6 +1,7 @@
 import dlib
 import bcrypt
 import os
+import psycopg2
 import re
 import cv2
 import numpy as np
@@ -124,7 +125,9 @@ except Exception as load_error:
     exit(1)
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key_123")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "ba38facd1e2a59cc22318b0712c14597")
+DATABASE_URL = os.getenv("DATABASE_URL")
+conn = psycopg2.connect(DATABASE_URL)
 
 def has_webcam():
     cap = cv2.VideoCapture(0)
