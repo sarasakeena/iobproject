@@ -16,6 +16,20 @@
         <div class="alert {% if success %}success{% else %}error{% endif %}">
             {{ message }}
         </div>
+
+        {% if success %}
+        <script>
+            // Ensuring that the page is fully loaded before binding the keypress event
+            document.addEventListener('DOMContentLoaded', function() {
+                document.addEventListener('keydown', function(event) {
+                    if (event.key === 'c' || event.key === 'C') {
+                        // Redirect to /biometric after pressing 'c'
+                        window.location.href = "/biometric"; // Change to your actual URL if needed
+                    }
+                });
+            });
+        </script>
+        {% endif %}
         {% endif %}
 
         <form method="POST">
@@ -23,10 +37,9 @@
             <input type="password" name="password" placeholder="Enter your pin" required>
             <button type="submit">Register</button>
         </form>
-        <p>Camera will open in a few sec after registration
-            Press 'c' to capture your face
+        <p>Camera will open in a few seconds after registration.
+            Press 'c' to capture your face.
         </p>
-        
     </div>
 </body>
 </html>

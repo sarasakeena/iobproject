@@ -1,10 +1,13 @@
 import sys
 import os
-import cv2
+import cv2 # type: ignore
 import torch
-import numpy as np
+import numpy as np # type: ignore
 import getpass
-from facenet_pytorch import MTCNN, InceptionResnetV1
+from facenet_pytorch import MTCNN, InceptionResnetV1 # type: ignore
+import sys
+sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf8')
+
 
 # Load models
 mtcnn = MTCNN(keep_all=False)

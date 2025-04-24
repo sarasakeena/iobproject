@@ -11,18 +11,29 @@ def get_db_connection():
 
 def save_face_hash(user_id: str, face_hash: str):
     conn = get_db_connection()
-    conn.execute("""
-        INSERT OR REPLACE INTO users (id, face_hash)
-        VALUES (?, ?)
-        """, (user_id, face_hash))
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO users (id, face_hash)
+        VALUES (%s, pgp_sym_encrypt(%s, %s))
+        ON CONFLICT(id) 
+        DO UPDATE SET face_hash = EXCLUDED.face_hash
+    """, (user_id, face_hash, 'your_secret_key'))
     conn.commit()
     conn.close()
 
+
+
 def get_all_hashes():
     conn = get_db_connection()
-    hashes = conn.execute("SELECT id, face_hash FROM users").fetchall()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, pgp_sym_decrypt(face_hash::bytea, 'your_secret_key') as decrypted_face_hash
+        FROM users
+    """)
+    hashes = cursor.fetchall()
     conn.close()
     return hashes
+
 
 def initialize_db():
     conn = get_db_connection()

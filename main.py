@@ -1,13 +1,13 @@
-import dlib
-import bcrypt
+from mailbox import Message
+import device_fingerprint
+import dlib # type: ignore
 import os
-import psycopg2
-import re
-import cv2
-import numpy as np
+import cv2 # type: ignore
+from flask_mail import Mail, Message # type: ignore
+import numpy as np # type: ignore
 import base64
-from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify
-from deepface import DeepFace
+from flask import Flask, render_template, request, redirect, session, url_for, flash, jsonify # type: ignore
+from deepface import DeepFace # type: ignore
 from tensorflow.keras.models import load_model  # type: ignore
 from tensorflow.keras.preprocessing.image import load_img, img_to_array  # type: ignore
 from database import register_user
@@ -16,18 +16,20 @@ from database.crud import (
     register_user,
     save_face_embedding
 )
-import face_recognition
-import psycopg2
-from dotenv import load_dotenv
+import face_recognition # type: ignore
+import psycopg2 # type: ignore
+from dotenv import load_dotenv # type: ignore
 load_dotenv()
 import subprocess
 import webbrowser
 import threading
-import mediapipe as mp
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+import mediapipe as mp # type: ignore
+from flask import Flask, render_template, request, jsonify, redirect, url_for # type: ignore
 import time
 from datetime import datetime, timedelta
-from mtcnn import MTCNN  # Added MTCNN import
+from mtcnn import MTCNN  # type: ignore # Added MTCNN import
+from device_fingerprint import DeviceFingerprint
+from database.db_utils import save_face_hash, get_all_hashes, initialize_db
 
 # Initialize MTCNN detector
 mtcnn_detector = MTCNN()
@@ -125,10 +127,13 @@ except Exception as load_error:
     exit(1)
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "ba38facd1e2a59cc22318b0712c14597")
-DATABASE_URL = os.getenv("DATABASE_URL")
-conn = psycopg2.connect(DATABASE_URL)
-
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_secret_key_123")
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'authenticatordevicefp@gmail.com'
+app.config['MAIL_PASSWORD'] = 'ba38facd1e2a59cc22318b0712c14597'  # Your App Password
+mail = Mail(app)
 def has_webcam():
     cap = cv2.VideoCapture(0)
     available = cap.isOpened()
@@ -143,10 +148,89 @@ face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False,
                                  min_detection_confidence=0.5)
 mp_drawing = mp.solutions.drawing_utils
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+@app.route('/verification')
+def verification_complete():
+    return render_template('verification.html') 
+@app.route('/send-code', methods=['POST'])
+def send_code():
+    data = request.json
+    email = data.get('email')
+    code = data.get('code')
 
-@app.route('/')
+    try:
+        msg = Message(subject="🔐 Login Verification Code",
+                      sender='authenticatordevicefp@gmail.com',
+                      recipients=[email],
+                      html=f"<h2>Your login code: <span style='color:blue;'>{code}</span></h2>")
+        mail.send(msg)
+        print("✅ Verification email sent to:", email)
+        return jsonify({"success": True, "message": "Verification email sent."})
+    except Exception as e:
+        print("❌ Failed to send verification email:", e)
+        return jsonify({"success": False, "message": "Failed to send email"}), 500
+
+
+@app.route('/transaction_page.html')
 def transaction_page():
     return render_template('transaction_page.html')
+@app.route('/')
+def home():
+    return render_template('index.html')
+@app.route('/save_face', methods=['POST'])
+def save_face():
+    # Assuming you send a face hash as JSON
+    face_data = request.json.get('face_hash')
+    
+    if face_data:
+        save_face_hash(face_data)  # Save the face hash to the database
+        return jsonify({"message": "Face hash saved successfully"}), 200
+    else:
+        return jsonify({"message": "No face hash provided"}), 400
+
+@app.route('/get_faces', methods=['GET'])
+def get_faces():
+    hashes = get_all_hashes()  # Get all stored face hashes from the database
+    return jsonify({"faces": hashes}), 200
+
+
+@app.route('/register_device', methods=['POST'])
+def register_device():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    device_info = device_fingerprint.capture_device_info()
+    fingerprint = device_fingerprint.generate_fingerprint(device_info)
+    device_fingerprint.store_fingerprint(user_id, device_info)
+
+    return jsonify({
+        'message': f"Device fingerprint registered for user {user_id}",
+        'fingerprint': fingerprint
+    })
+
+@app.route('/loginn', methods=['POST'])
+def loginn():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    ip_address = data.get('ip_address')
+    mac_address = data.get('mac_address')
+    device_info = device_fingerprint.capture_device_info()
+    fingerprint = device_fingerprint.generate_fingerprint(device_info)
+
+    login_attempt = {
+        'user_id': user_id,
+        'fingerprint': fingerprint,
+        'ip_address': ip_address,
+        'mac_address': mac_address
+    }
+
+    risk_score = device_fingerprint.evaluate_risk(login_attempt)
+    device_fingerprint.handle_login(login_attempt)
+
+    return jsonify({
+        'message': f"Access granted to user {user_id}",
+        'risk_score': risk_score
+    })
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -217,6 +301,7 @@ def login():
 def register_page():
     return render_template('register.html')
 
+
 @app.route('/register', methods=['POST'])
 def register():
     name = request.form['name']
@@ -248,6 +333,9 @@ def register():
         print(f"[❌ ERROR] Exception occurred: {e}")
         flash(f"Server error: {e}", 'error')
         return redirect(url_for('register_page'))
+@app.route('/biometric', methods=['GET'])
+def biometric_new():
+    return render_template('biometric.html')
 
 def open_browser():
     webbrowser.open("http://localhost:5000")
@@ -346,7 +434,6 @@ def select_user_type():
         session.pop('pin_registered', None)  # Clear previous registration if any
     return redirect(url_for('pin'))
 
-
 @app.route('/register_pin', methods=['POST'])
 def register_pin():
     if session.get('user_type') != 'new':
@@ -360,56 +447,29 @@ def register_pin():
         flash('PIN must be 4-6 digits', 'error')
         return redirect(url_for('pin'))
     
-    # Hash the PIN using bcrypt
-    hashed_pin = bcrypt.hashpw(pin.encode('utf-8'), bcrypt.gensalt())
-    
-    # Store the hashed PIN (in a real app, store this in a database, not in the session)
-    session['hashed_pin'] = hashed_pin  # Store the hashed PIN
-    
-    # Remove plain-text PIN from the session (it's now unnecessary and should not be stored)
-    session.pop('temp_pin', None)
-    
-    # Indicate that PIN is registered
+    # Store the PIN (in a real app, store hashed version in database)
+    session['temp_pin'] = pin
     session['pin_registered'] = True
     flash('PIN registered successfully! Please verify your PIN', 'success')
-    
     return redirect(url_for('pin'))
-
-
-@app.route('/check_pin', methods=['GET'])
-def check_pin():
-    # Check if the hashed PIN is stored in the session
-    if 'hashed_pin' in session:
-        hashed_pin = session['hashed_pin']
-        
-        # Check if the stored hashed PIN matches the bcrypt format (60 characters long)
-        if re.match(r'^\$2[ab]\$\d{2}\$[A-Za-z0-9./]{53}$', hashed_pin):
-            flash('PIN is stored in a valid hashed form.', 'success')
-        else:
-            flash('Stored value is not a valid hash.', 'error')
-    else:
-        flash('No hashed PIN found in session.', 'error')
-    
-    return redirect(url_for('pin'))
-
 
 @app.route('/verify_pin', methods=['POST'])
 def verify_pin():
-    if 'hashed_pin' not in session:
+    print("Received request for PIN verification")  # Debugging output
+    if 'temp_pin' not in session:
         flash('No PIN registered for verification', 'error')
         return redirect(url_for('pin'))
     
     entered_pin = request.form.get('pin')
     
-    # Check if the entered PIN matches the stored hashed PIN
-    if bcrypt.checkpw(entered_pin.encode('utf-8'), session['hashed_pin']):
+    if session['temp_pin'] == entered_pin:
         flash('PIN verification successful!', 'success')
-        session.pop('hashed_pin', None)  # Remove the hashed PIN after verification
-        session.pop('pin_registered', None)  # Clear the PIN registration status
+        session.pop('temp_pin', None)
+        session.pop('pin_registered', None)
         return redirect(url_for('biometric'))
     else:
-        flash('Invalid PIN, please try again', 'error')
-        return redirect(url_for('pin'))@app.route('/verify_pin', methods=['POST'])
+        flash('Invalid PIN. Please try again.', 'error')
+        return redirect(url_for('pin'))
 
 @app.route('/pin')
 def pin():
@@ -474,5 +534,5 @@ def detect_faces_mtcnn():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # fallback to 5000 for local dev
-    app.run(host='0.0.0.0', port=port)
+    #main()
+    app.run(host="0.0.0.0", port=5000, debug=False)

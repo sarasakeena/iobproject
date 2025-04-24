@@ -45,9 +45,11 @@ WORKDIR /app
 
 # Copy and install dependencies
 COPY requirements.txt .
+COPY models/shape_predictor_68_face_landmarks.dat /app/models/
+
 
 RUN pip install --upgrade pip==24.0 setuptools==70.0.0 wheel
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --timeout=300
 
 # Copy the rest of your code
 COPY . .

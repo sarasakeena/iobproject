@@ -9,9 +9,26 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: sakeena123
     ports:
-      - "5432:5432"
+      - "5432:5432"  # This is for exposing it to the host (optional, can be used to access DB from the host)
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  app:
+    build: .  # Assuming you have a Dockerfile in your app directory
+    environment:
+      DATABASE_URL: "postgres://postgres:sakeena123@db:5432/face_auth_db"
+    depends_on:
+      - db
+    networks:
+      - app_network
+    ports:
+      - "5000:5000"  # Expose your app port to host (if needed)
+
+networks:
+  app_network:
+    driver: bridge
 
 volumes:
   pgdata:
